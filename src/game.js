@@ -9,17 +9,41 @@ var Q = Quintus({development: true})
 //************
 // Load assets
 //*********************
-Q.load("mario_small.png, mario_small.json, goomba.png, goomba.json, bloopa.png, bloopa.json", function(){
+Q.load(["mario_small.png","mario_small.json",
+        "goomba.png","goomba.json",
+        "bloopa.png","bloopa.json",
+        "princess.png",
+        "mainTitle.png"], function(){
   Q.compileSheets("mario_small.png", "mario_small.json");
   Q.compileSheets("goomba.png", "goomba.json");
   Q.compileSheets("bloopa.png", "bloopa.json");
+  Q.sheet("mainTitle", "mainTitle.png", {tilew: 320, tileh:480});
+  Q.stageScene("mainTitle");
 });
 
 //************
 // Load TMX level
 //*********************
 Q.loadTMX("level.tmx, tiles.png", function(){
-  Q.stageScene("level1");
+  Q.stageScene("mainTitle");
+});
+
+//************
+// Scene main title
+//*********************
+Q.scene("mainTitle", function(stage){
+  var mainTitle = new Q.Sprite({ sheet: "mainTitle" });
+  var button = stage.insert(new Q.UI.Button({ x: 0, y: 0, w:320, h:480}));
+
+  //Queda hacer que pulsando enter tambien pueda entrar
+  mainTitle.center();
+  button.center();
+  stage.insert(mainTitle);
+
+  button.on("click", function(e){
+      Q.clearStages();
+      Q.stageScene("level1");
+  });
 });
 
 //************
@@ -35,7 +59,27 @@ Q.scene("level1", function(stage){
   //Enemies
   stage.insert(new Q.Goomba());
   stage.insert(new Q.Bloopa({x: 500, y:290}));
+  stage.insert(new Q.Princess({x: 700, y:500}));
 
+});
+
+//************
+// Scene endGame
+//*********************
+Q.scene("dialog", function(stage){
+  var box = stage.insert(new Q.UI.Container({
+    x: Q.width/2, y: Q.height/2, fill: "rgba(0,0,0,0.5)"
+  }));
+  
+  var button = box.insert(new Q.UI.Button({ x: 0, y: 0, fill: "#CCCCCC",
+                                           label: "Play Again" }))         
+  var label = box.insert(new Q.UI.Text({x:10, y: -10 - button.p.h, 
+                                        label: stage.options.label }));
+  button.on("click",function() {
+    Q.clearStages();
+    Q.stageScene(stage.options.sceneToGo);
+  });
+  box.fit(20);
 });
 
 /*Q.animations('marioAnimations', {
@@ -55,6 +99,13 @@ Q.Sprite.extend("Mario", {
     });
 
     this.add('2d, platformerControls');
+
+    this.on("hit.sprite", function(collision){
+      if (collision.obj.isA("Princess")){
+        Q.stageScene("dialog",1, { label: "You win", sceneToGo: "mainTitle"});
+        this.del('platformerControls');
+      }
+    });
   }
 
 });
@@ -74,6 +125,7 @@ Q.Sprite.extend("Goomba", {
     this.add('2d, aiBounce');
     this.on("bump.left, bump.right", function(collision){
       if (collision.obj.isA("Mario")){
+        Q.stageScene("dialog",1, { label: "You Died", sceneToGo: "mainTitle"});
         collision.obj.destroy();
       }
     });
@@ -82,6 +134,10 @@ Q.Sprite.extend("Goomba", {
         this.destroy();
       }
     });
+  },
+
+  step: function(dt){
+
   }
 });
 
@@ -100,9 +156,12 @@ Q.Sprite.extend("Bloopa", {
     });
 
     this.add('2d');
+
     this.on("bump.left, bump.right, bump.bottom", function(collision){
       if (collision.obj.isA("Mario")){
+        Q.stageScene("dialog",1, { label: "You Died", sceneToGo: "mainTitle"});
         collision.obj.destroy();
+        this.p.vy = this.p.vyAux;
       }
     });
     this.on("bump.top", function(collision){
@@ -121,7 +180,22 @@ Q.Sprite.extend("Bloopa", {
       this.p.vy = -this.p.vy;
       this.p.direction = "down";
     }
+    this.p.vyAux = this.p.vy;
   }
 });
+
+//************
+// Princess
+//*********************
+Q.Sprite.extend("Princess", {
+  init: function(p){
+    this._super(p,{
+      asset: "princess.png"
+    });
+    this.add('2d');
+  }
+});
+
+
 
 }; 
